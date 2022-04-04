@@ -1,24 +1,24 @@
 #!/usr/bin/env node
 
-import Less from "less";
-import Genex from "genex";
-import {copyFileSync, linkSync, lstatSync, statSync, readFileSync, unlinkSync, writeFileSync} from "fs";
-import {basename, dirname, join, resolve} from "path";
-import {fileURLToPath} from "url";
-import {inspect, isDeepStrictEqual} from "util";
 import assert from "assert";
+import { copyFileSync, linkSync, lstatSync, readFileSync, statSync, unlinkSync, writeFileSync } from "fs";
+import Genex from "genex";
+import Less from "less";
+import { basename, dirname, join, resolve } from "path";
+import { fileURLToPath } from "url";
+import { inspect, isDeepStrictEqual } from "util";
 
-const $0    = fileURLToPath(import.meta.url);
-const root  = dirname($0).replace(/\/scripts$/i, "");
+const $0 = fileURLToPath(import.meta.url);
+const root = dirname($0).replace(/\/scripts$/i, "");
 const isObj = obj => "object" === typeof obj && null !== obj;
 const isKey = key => "string" === typeof key || "symbol" === typeof key;
 const isEnt = obj => Array.isArray(obj) && 2 === obj.length && isKey(obj[0]);
 
-const source  = resolve(process.argv[2] || join(root, "..", "atom"));
-const output  = resolve(process.argv[3] || join(root, "icons"));
-const iconDB  = join(source, "lib", "icons", ".icondb.js");
-const icons   = join(source, "styles", "icons.less");
-const fonts   = join(source, "styles", "fonts.less");
+const source = resolve(process.argv[2] || join(root, "..", "atom"));
+const output = resolve(process.argv[3] || join(root, "icons"));
+const iconDB = join(source, "lib", "icons", ".icondb.js");
+const icons = join(source, "styles", "icons.less");
+const fonts = join(source, "styles", "fonts.less");
 const colours = join(source, "styles", "colours.less");
 assertDir(source, output);
 assertFile(fonts, colours);
@@ -28,62 +28,62 @@ export default Promise.all([
 	loadIcons(icons),
 	loadFonts(fonts),
 	loadColours(colours),
-]).then(async ([{default: iconDB}, icons, fonts, colours]) => {
-	let count = updateFonts(fonts, output);
+]).then(async ([{ default: iconDB }, icons, fonts, colours]) => {
+	const count = updateFonts(fonts, output);
 	console.info(count ? `${count} font(s) updated` : "Fonts already up-to-date");
-	
+
 	fonts.push({
-		id:     "octicons regular",
-		src:    [{path: join(output, "octicons.woff2"), format: "woff2"}],
+		id: "octicons regular",
+		src: [{ path: join(output, "octicons.woff2"), format: "woff2" }],
 		weight: "normal",
-		style:  "normal",
-		size:   "100%",
+		style: "normal",
+		size: "100%",
 	});
-	for(const font of fonts)
+	for(const font of fonts) {
 		font.id = icons.fonts[font.id].id || font.id;
-	
+	}
+
 	// Icons provided by Octicons and/or Atom's core stylesheets
 	const defaultIcons = {
-		_file:   {fontId: "octicons", fontCharacter: "\\f011", fontSize: "114%"},
-		_folder: {fontId: "octicons", fontCharacter: "\\f016", fontSize: "114%"},
-		_repo:   {fontId: "octicons", fontCharacter: "\\f001", fontSize: "114%"},
+		_file: { fontId: "octicons", fontCharacter: "\\f011", fontSize: "114%" },
+		_folder: { fontId: "octicons", fontCharacter: "\\f016", fontSize: "114%" },
+		_repo: { fontId: "octicons", fontCharacter: "\\f001", fontSize: "114%" },
 	};
 	const unlistedIcons = {
-		"circuit-board": {fontId: "octicons", fontCharacter: "\\f0d6", fontSize: "114%"},
-		mail:            {fontId: "octicons", fontCharacter: "\\f03b", fontSize: "114%"},
-		paintcan:        {fontId: "octicons", fontCharacter: "\\f0d1", fontSize: "114%"},
-		pdf:             {fontId: "octicons", fontCharacter: "\\f014", fontSize: "114%"},
-		star:            {fontId: "octicons", fontCharacter: "\\f02a", fontSize: "114%"},
-		text:            {fontId: "octicons", fontCharacter: "\\f011", fontSize: "114%"},
+		"circuit-board": { fontId: "octicons", fontCharacter: "\\f0d6", fontSize: "114%" },
+		mail: { fontId: "octicons", fontCharacter: "\\f03b", fontSize: "114%" },
+		paintcan: { fontId: "octicons", fontCharacter: "\\f0d1", fontSize: "114%" },
+		pdf: { fontId: "octicons", fontCharacter: "\\f014", fontSize: "114%" },
+		star: { fontId: "octicons", fontCharacter: "\\f02a", fontSize: "114%" },
+		text: { fontId: "octicons", fontCharacter: "\\f011", fontSize: "114%" },
 	};
-	({icons} = icons);
-	icons = {...unlistedIcons, ...icons};
-	
+	({ icons } = icons);
+	icons = { ...unlistedIcons, ...icons };
+
 	// Truncate font paths to output directory
-	for(const font of fonts)
+	for(const font of fonts) {
 		font.src.forEach(src => src.path = "./" + basename(src.path));
-	
+	}
+
 	// Alphabetise font-families, but keep File-Icons at the front of array
 	fonts = fonts.sort((a, b) => a.id.toLowerCase().localeCompare(b.id.toLowerCase()));
 	const index = fonts.findIndex(font => "fi" === font.id);
-	if(-1 !== index)
+	if(-1 !== index) {
 		fonts.unshift(...fonts.splice(index, 1));
-	else throw new ReferenceError("Failed to locate font with ID 'fi'");
-	
-	const colouredTheme = buildTheme({icons, fonts, colours, iconDB});
-	colouredTheme.iconDefinitions = {...defaultIcons, ...colouredTheme.iconDefinitions};
+	} else throw new ReferenceError("Failed to locate font with ID 'fi'");
+
+	const colouredTheme = buildTheme({ icons, fonts, colours, iconDB });
+	colouredTheme.iconDefinitions = { ...defaultIcons, ...colouredTheme.iconDefinitions };
 	saveJSON(colouredTheme, join(output, "file-icons-icon-theme.json"));
-	
+
 	const uncolouredTheme = desaturate(colouredTheme, colours);
 	saveJSON(uncolouredTheme, join(output, "file-icons-colourless-icon-theme.json"));
-	
 }).catch(error => {
 	console.error(error);
 	process.exit(1);
 });
 
-
-// Section: Icon Database {{{1
+// Section: Icon Database {{{1
 
 /**
  * Generate an icon-theme in the format required by VS Code.
@@ -96,110 +96,121 @@ export default Promise.all([
  * @return {IconTheme}
  * @internal
  */
-function buildTheme({iconDB, icons, fonts, colours, prefix = "_"} = {}){
+function buildTheme({ iconDB, icons, fonts, colours, prefix = "_" } = {}) {
 	const theme = {
 		__proto__: null,
 		fonts,
-		file:            prefix + "file",
-		folder:          prefix + "folder",
-		rootFolder:      prefix + "repo",
+		file: prefix + "file",
+		folder: prefix + "folder",
+		rootFolder: prefix + "repo",
 		iconDefinitions: {},
-		fileExtensions:  {},
-		fileNames:       {},
-		folderNames:     {},
-		languageIds:     {},
-		light:           {},
+		fileExtensions: {},
+		fileNames: {},
+		folderNames: {},
+		languageIds: {},
+		light: {},
 	};
-	
+
 	const getColourValue = colour => {
 		if(!colour) return "#000000";
-		const index      = colour.indexOf("-");
+		const index = colour.indexOf("-");
 		const brightness = colour.slice(0, index);
-		const name       = colour.slice(index + 1);
-		const value      = colours[name]?.[brightness];
-		if(null == value)
+		const name = colour.slice(index + 1);
+		const value = colours[name]?.[brightness];
+		if(null == value) {
 			throw new ReferenceError(`No such colour ${colour}`);
+		}
 		return value;
 	};
-	
+
 	const [directoryIcons, fileIcons] = iconDB;
-	for(const iconList of [directoryIcons, fileIcons])
-	for(let [
-		icon,
-		colours,
-		match,,
-		matchPath,
-		interpreter,
-		scope,
-		language,
-	] of iconList[0]){
-		if(matchPath || !(match instanceof RegExp)) continue;
-		
-		// HACK
-		if(/^\.atom-socket-.+\.\d$/.source === match.source)
-			continue;
-		
-		// HACK: Conflicting file-extension: `.vh` (V, SystemVerilog)
-		// Searching GitHub yields mostly Verilog results, so exclude V.
-		if("v-icon" === icon && /\.vh$/i.source === match.source)
-			continue;
-		
-		// Normalise icon ID: "pdf-icon" => "pdf", "icon-file-text" => "text"
-		if(icon.startsWith("icon-file-")) icon = icon.slice(10);
-		else if(icon.startsWith("icon-")) icon = icon.slice(5);
-		else if(icon.endsWith("-icon"))   icon = icon.slice(0, -5);
-		if(icon.startsWith("_"))          icon = icon.slice(1);
-		validateIcon(icon, icons, fonts);
-		
-		// Normalise dark- and light-motif variants
-		colours = Array.isArray(colours) ? [...colours].slice(0, 2) : [colours];
-		colours[0] === colours[1] && colours.pop();
-		
-		const add = (listName, key) => {
-			key = key.toLowerCase();
-			let list = theme[listName];
-			for(const colour of colours){
-				const uid = prefix + icon + (colour ? "_" + colour : "");
-				list[key] = uid;
-				if(null == theme.iconDefinitions[uid]){
-					const def = {...icons[icon], fontColor: getColourValue(colour)};
-					if("#000000" === def.fontColor)
-						delete def.fontColor;
-					theme.iconDefinitions[uid] = def;
-				}
-				list = theme.light[listName] ??= {};
-			}
-		};
-		try{
-			match = new RegExp(
-				match.source
-					.replace(/^\^stdlib\(\?:-\.\+\)\?/, "^stdlib")
-					.replace(/(?<!\\)\|\(\?<[!=][^()]+\)/g, "")
-					.replace(/(?<!\\)\(\?:(?:\[-\._\]\?|_)\\[wd][+*]\)\?/g, ""),
-				match.flags,
-			);
-			const matches = parseRegExp(match);
-			const isDir = directoryIcons === iconList;
-			
-			if(!isDir)
-				for(const ext of matches.suffixes)
-					add("fileExtensions", ext.replace(/^\./, ""));
-			for(const name of matches.full)
-				add(isDir ? "folderNames" : "fileNames", name);
-		}
-		catch(error){
-			if(error instanceof RangeError
-			|| error.message.includes("Unsupported lookbehind")){
-				console.warn("Skipping:", match);
+	for(const iconList of [directoryIcons, fileIcons]) {
+		for(
+			let [
+				icon,
+				colours,
+				match,
+				,
+				matchPath,
+				interpreter,
+				scope,
+				language,
+			] of iconList[0]
+		) {
+			if(matchPath || !(match instanceof RegExp)) continue;
+
+			// HACK
+			if(/^\.atom-socket-.+\.\d$/.source === match.source) {
 				continue;
 			}
-			console.warn("Stopped at", match);
-			throw error;
+
+			// HACK: Conflicting file-extension: `.vh` (V, SystemVerilog)
+			// Searching GitHub yields mostly Verilog results, so exclude V.
+			if("v-icon" === icon && /\.vh$/i.source === match.source) {
+				continue;
+			}
+
+			// Normalise icon ID: "pdf-icon" => "pdf", "icon-file-text" => "text"
+			if(icon.startsWith("icon-file-")) icon = icon.slice(10);
+			else if(icon.startsWith("icon-")) icon = icon.slice(5);
+			else if(icon.endsWith("-icon")) icon = icon.slice(0, -5);
+			if(icon.startsWith("_")) icon = icon.slice(1);
+			validateIcon(icon, icons, fonts);
+
+			// Normalise dark- and light-motif variants
+			colours = Array.isArray(colours) ? [...colours].slice(0, 2) : [colours];
+			colours[0] === colours[1] && colours.pop();
+
+			const add = (listName, key) => {
+				key = key.toLowerCase();
+				let list = theme[listName];
+				for(const colour of colours) {
+					const uid = prefix + icon + (colour ? "_" + colour : "");
+					list[key] = uid;
+					if(null == theme.iconDefinitions[uid]) {
+						const def = { ...icons[icon], fontColor: getColourValue(colour) };
+						if("#000000" === def.fontColor) {
+							delete def.fontColor;
+						}
+						theme.iconDefinitions[uid] = def;
+					}
+					list = theme.light[listName] ??= {};
+				}
+			};
+			try {
+				match = new RegExp(
+					match.source
+						.replace(/^\^stdlib\(\?:-\.\+\)\?/, "^stdlib")
+						.replace(/(?<!\\)\|\(\?<[!=][^()]+\)/g, "")
+						.replace(/(?<!\\)\(\?:(?:\[-\._\]\?|_)\\[wd][+*]\)\?/g, ""),
+					match.flags,
+				);
+				const matches = parseRegExp(match);
+				const isDir = directoryIcons === iconList;
+
+				if(!isDir) {
+					for(const ext of matches.suffixes) {
+						add("fileExtensions", ext.replace(/^\./, ""));
+					}
+				}
+				for(const name of matches.full) {
+					add(isDir ? "folderNames" : "fileNames", name);
+				}
+			} catch (error) {
+				if(
+					error instanceof RangeError
+					|| error.message.includes("Unsupported lookbehind")
+				) {
+					console.warn("Skipping:", match);
+					continue;
+				}
+				console.warn("Stopped at", match);
+				throw error;
+			}
 		}
 	}
 	return theme;
 }
-
 
 /**
  * Generate a colourless version of a coloured icon-theme.
@@ -208,32 +219,33 @@ function buildTheme({iconDB, icons, fonts, colours, prefix = "_"} = {}){
  * @return {IconTheme}
  * @internal
  */
-function desaturate(input, colours){
-	
+function desaturate(input, colours) {
 	// Construct a regex for stripping the trailing colour name/shade
 	const names = new Set();
-	for(const [colour, value] of Object.entries(colours))
-	for(const [luminosity]    of Object.entries(value))
-		names.add([luminosity, colour].join("-"));
+	for(const [colour, value] of Object.entries(colours)) {
+		for(const [luminosity] of Object.entries(value)) {
+			names.add([luminosity, colour].join("-"));
+		}
+	}
 	const regex = new RegExp(`[-_]?(?:${[...names].join("|")})$`, "i");
-	
+
 	// Start culling
-	const result  = JSON.parse(JSON.stringify(input));
+	const result = JSON.parse(JSON.stringify(input));
 	const oldDefs = input.iconDefinitions;
-	const newDefs = result.iconDefinitions = {__proto__: null};
-	
-	for(const [oldID, props] of Object.entries(oldDefs)){
+	const newDefs = result.iconDefinitions = { __proto__: null };
+
+	for(const [oldID, props] of Object.entries(oldDefs)) {
 		const newID = oldID.replace(regex, "");
 		delete props.fontColor;
-		
+
 		// Sanity check
-		if(newID in newDefs)
+		if(newID in newDefs) {
 			assert.deepStrictEqual(props, newDefs[newID]);
-		else newDefs[newID] = props;
+		} else newDefs[newID] = props;
 	}
 	const remap = from => {
-		const to = {__proto__: null};
-		for(let [key, iconID] of Object.entries(from)){
+		const to = { __proto__: null };
+		for(let [key, iconID] of Object.entries(from)) {
 			iconID = iconID.replace(regex, "");
 			assert(iconID in newDefs);
 			to[key] = iconID;
@@ -242,31 +254,37 @@ function desaturate(input, colours){
 	};
 	const isEmpty = obj => isObj(obj) && !Object.keys(obj).length;
 	const cull = (...listNames) => {
-		for(const listName of listNames){
-			if(!isObj(result?.light?.[listName])
-			|| !isObj(result[listName])) continue;
-			const darkIcons  = result[listName];
-			const lightIcons = result.light[listName];
-			for(const [key, value] of Object.entries(lightIcons)){
-				if(key in darkIcons && isDeepStrictEqual(darkIcons[key], value))
-					delete lightIcons[key];
+		for(const listName of listNames) {
+			if(
+				!isObj(result?.light?.[listName])
+				|| !isObj(result[listName])
+			) {
+				continue;
 			}
-			if(isEmpty(result.light[listName]))
+			const darkIcons = result[listName];
+			const lightIcons = result.light[listName];
+			for(const [key, value] of Object.entries(lightIcons)) {
+				if(key in darkIcons && isDeepStrictEqual(darkIcons[key], value)) {
+					delete lightIcons[key];
+				}
+			}
+			if(isEmpty(result.light[listName])) {
 				delete result.light[listName];
+			}
 		}
-		if(isEmpty(result.light))
+		if(isEmpty(result.light)) {
 			delete result.light;
+		}
 	};
-	for(const context of [result, result.light]){
+	for(const context of [result, result.light]) {
 		if(!context) continue;
 		context.fileExtensions = remap(context.fileExtensions);
-		context.fileNames      = remap(context.fileNames);
-		context.folderNames    = remap(context.folderNames);
+		context.fileNames = remap(context.fileNames);
+		context.folderNames = remap(context.folderNames);
 	}
 	cull(..."fileExtensions fileNames folderNames".split(" "));
 	return result;
 }
-
 
 /**
  * Extract a list of unique filename/extension matches from a regex.
@@ -274,7 +292,7 @@ function desaturate(input, colours){
  * @return {MatchesByType}
  * @internal
  */
-function parseRegExp(input){
+function parseRegExp(input) {
 	/**
 	 * @typedef {Object} MatchesByType
 	 * @property {Set} substrings - Substrings appearing anywhere in a filename
@@ -285,108 +303,118 @@ function parseRegExp(input){
 	const output = {
 		__proto__: null,
 		substrings: new Set(),
-		prefixes:   new Set(),
-		suffixes:   new Set(),
-		full:       new Set(),
+		prefixes: new Set(),
+		suffixes: new Set(),
+		full: new Set(),
 	};
-	
-	if("genex" !== input?.constructor?.name.toLowerCase())
+
+	if("genex" !== input?.constructor?.name.toLowerCase()) {
 		input = Genex(input);
-	
-	const anchors  = new Set();
-	const chars    = new Set();
+	}
+
+	const anchors = new Set();
+	const chars = new Set();
 	const killList = new Set();
-	const lists    = new Set();
-	const walk     = (obj, refs = new WeakSet()) => {
-		if("object" !== typeof obj || null === obj || refs.has(obj))
+	const lists = new Set();
+	const walk = (obj, refs = new WeakSet()) => {
+		if("object" !== typeof obj || null === obj || refs.has(obj)) {
 			return;
-		refs.add(obj);
-		if(Array.isArray(obj)){
-			lists.add(obj);
-			for(const item of obj){
-				try{ walk(item, refs); }
-				catch(e){ killList.add(item); }
-			}
 		}
-		else{
-			if(Infinity === obj.max){
-				if(!obj.min)
-					throw new RangeError("Bad range");
-				obj.max = ~~obj.min;
+		refs.add(obj);
+		if(Array.isArray(obj)) {
+			lists.add(obj);
+			for(const item of obj) {
+				try {
+					walk(item, refs);
+				} catch (e) {
+					killList.add(item);
+				}
 			}
-			else switch(obj.type){
-				case 2: "^$".includes(obj.value) && anchors.add(obj); break;
-				case 7: chars.add(obj.value); break;
-				default: {
-					const {options: opts, stack} = obj;
-					if(Array.isArray(opts)){
-						lists.add(opts);
-						for(const opt of opts)
-							try{ walk(opt, refs); }
-							catch(e){ killList.add(opt); }
+		} else {
+			if(Infinity === obj.max) {
+				if(!obj.min) {
+					throw new RangeError("Bad range");
+				}
+				obj.max = ~~obj.min;
+			} else {
+				switch (obj.type) {
+					case 2:
+						"^$".includes(obj.value) && anchors.add(obj);
+						break;
+					case 7:
+						chars.add(obj.value);
+						break;
+					default: {
+						const { options: opts, stack } = obj;
+						if(Array.isArray(opts)) {
+							lists.add(opts);
+							for(const opt of opts) {
+								try {
+									walk(opt, refs);
+								} catch (e) {
+									killList.add(opt);
+								}
+							}
+						} else if(Array.isArray(stack)) {
+							lists.add(stack);
+							walk(stack, refs);
+						} else walk(obj.value, refs);
 					}
-					else if(Array.isArray(stack)){
-						lists.add(stack);
-						walk(stack, refs);
-					}
-					else walk(obj.value, refs);
 				}
 			}
 		}
 	};
-	
+
 	walk(input.tokens);
-	for(const token of killList){
-		for(const list of lists){
-			while(list.includes(token))
+	for(const token of killList) {
+		for(const list of lists) {
+			while (list.includes(token)) {
 				list.splice(list.indexOf(token), 1);
+			}
 		}
 	}
-	
-	const used   = String.fromCodePoint(...chars);
+
+	const used = String.fromCodePoint(...chars);
 	const unused = Array.from(getUnusedChar(used + "\\[]{}()?+*", 2))
 		.map(char => char.codePointAt(0));
-	
-	for(const anchor of anchors){
+
+	for(const anchor of anchors) {
 		anchor.type = 7;
-		anchor.value = "^" === anchor.value
-			? unused[0]
-			: unused[1];
+		anchor.value = "^" === anchor.value ? unused[0] : unused[1];
 	}
-	
+
 	const cases = new Set();
 	input.generate(result => {
 		if(cases.size > 1000) throw new RangeError("Too many cases to generate");
 		cases.add(result);
 	});
-	
-	for(let str of cases){
+
+	for(let str of cases) {
 		let anchoredToStart = false;
-		let anchoredToEnd   = false;
+		let anchoredToEnd = false;
 		str = [...str];
 		str = str.map((char, index) => {
 			const code = char.codePointAt(0);
-			if(code === unused[0]){
+			if(code === unused[0]) {
 				assert.strictEqual(index, 0);
 				anchoredToStart = true;
-			}
-			else if(code === unused[1]){
+			} else if(code === unused[1]) {
 				assert.strictEqual(index, str.length - 1);
 				anchoredToEnd = true;
-			}
-			else return char;
+			} else return char;
 			return "";
 		}).join("");
-		const type =
-			anchoredToStart && anchoredToEnd ? "full"     :
-			anchoredToStart                  ? "prefixes" :
-			anchoredToEnd                    ? "suffixes" :
-			"substrings";
+		const type = anchoredToStart && anchoredToEnd
+			? "full"
+			: anchoredToStart
+			? "prefixes"
+			: anchoredToEnd
+			? "suffixes"
+			: "substrings";
 		output[type].add(str);
 	}
 	return output;
 }
-
 
 /**
  * Write an object to disk as a JSON file, preserving timestamps if identical.
@@ -395,17 +423,18 @@ function parseRegExp(input){
  * @return {void}
  * @internal
  */
-function saveJSON(input, path){
+function saveJSON(input, path) {
 	path = resolve(path);
 	let existingFile = null;
-	try{ existingFile = readFileSync(path, "utf8"); }
-	catch(e){}
+	try {
+		existingFile = readFileSync(path, "utf8");
+	} catch (e) {
+	}
 	input = JSON.stringify(input, null, "\t").trim() + "\n";
 	input === existingFile
 		? console.info(`Theme already up-to-date: ${basename(path)}`)
 		: writeFileSync(path, input, "utf8");
 }
-
 
 /**
  * Ensure that a complete icon-definition with the given ID exists.
@@ -415,22 +444,22 @@ function saveJSON(input, path){
  * @return {void}
  * @internal
  */
-function validateIcon(name, icons, fonts){
-	if(name in icons){
-		for(const key of ["fontCharacter", "fontId"]){
+function validateIcon(name, icons, fonts) {
+	if(name in icons) {
+		for(const key of ["fontCharacter", "fontId"]) {
 			const value = icons[name][key];
-			if("string" !== typeof value || !value)
+			if("string" !== typeof value || !value) {
 				throw new TypeError(`Missing "${key}" field in icon "${name}"`);
+			}
 		}
-		const {fontId} = icons[name];
-		if(!fonts.some(font => fontId === font.id))
+		const { fontId } = icons[name];
+		if(!fonts.some(font => fontId === font.id)) {
 			throw new ReferenceError(`Icon "${name}" references undefined font "${fontId}"`);
-	}
-	else throw new ReferenceError(`Undefined icon: ${name}`);
+		}
+	} else throw new ReferenceError(`Undefined icon: ${name}`);
 }
 
-
-// Section: Icons {{{1
+// Section: Icons {{{1
 
 /**
  * Load icon definitions from the given stylesheet.
@@ -440,42 +469,44 @@ function validateIcon(name, icons, fonts){
  * @return {Object}
  * @private
  */
-async function loadIcons(from){
+async function loadIcons(from) {
 	from = resolve(from);
-	const icons = {__proto__: null};
-	const fonts = {__proto__: null};
+	const icons = { __proto__: null };
+	const fonts = { __proto__: null };
 	const rules = parseRules(await loadStyleSheet(from));
-	for(const selector in rules){
+	for(const selector in rules) {
 		const rule = rules[selector];
 		const font = (rule["font-family"] || "").toLowerCase();
 		if(!font) continue;
-		if(/^\.((?:(?!-|\d)[-a-z0-9]+|_\d+[-a-z0-9]*)(?<!-))(?:::?before)?$/i.test(selector)){
+		if(/^\.((?:(?!-|\d)[-a-z0-9]+|_\d+[-a-z0-9]*)(?<!-))(?:::?before)?$/i.test(selector)) {
 			const name = RegExp.$1.replace(/^_|-icon$/gi, "");
-			if("string" === typeof rule.content)
+			if("string" === typeof rule.content) {
 				icons[name] = rule;
-			else fonts[font] ||= {...rule, id: name.toLowerCase()};
+			} else fonts[font] ||= { ...rule, id: name.toLowerCase() };
 		}
 		rule["font-family"] = font;
 	}
-	for(const name in icons){
+	for(const name in icons) {
 		const icon = icons[name];
 		const font = icon["font-family"];
-		if(!font)
+		if(!font) {
 			throw new TypeError(`No font defined for icon '${name}'`);
-		if(!(font in fonts))
+		}
+		if(!(font in fonts)) {
 			throw new TypeError(`Undefined font ${font}`);
+		}
 		const size = parseSize(icon["font-size"] || fonts[font]["font-size"], 14);
 		icons[name] = {
 			fontCharacter: icon.content,
 			fontColor: "#000000",
 			fontId: fonts[font].id,
 		};
-		if("100%" !== size)
+		if("100%" !== size) {
 			icons[name].fontSize = size;
+		}
 	}
-	return {icons: sortProps(icons), fonts};
+	return { icons: sortProps(icons), fonts };
 }
-
 
 /**
  * Convert a CSS font-size into a percentage string.
@@ -486,12 +517,10 @@ async function loadIcons(from){
  * @return {String}
  * @private
  */
-function parseSize(input, baseSize = 16){
-	switch(typeof input){
+function parseSize(input, baseSize = 16) {
+	switch (typeof input) {
 		case "number":
-			return isFinite(input)
-				? `${Math.round((input / Number(baseSize)) * 100)}%`
-				: "100%";
+			return isFinite(input) ? `${Math.round((input / Number(baseSize)) * 100)}%` : "100%";
 		case "bigint":
 			return String((input / 100n) * BigInt(baseSize)) + "%";
 		case "object":
@@ -502,26 +531,45 @@ function parseSize(input, baseSize = 16){
 			value = parseFloat(value);
 			unit = unit.join("").toLowerCase();
 			const cm = 96 / 2.54;
-			switch(unit){
-				case "cm":  value *= cm;        break; // Centimetre
-				case "mm":  value *= cm / 10;   break; // Millimetre
-				case "q":   value *= cm / 40;   break; // Quarter-millimetre
-				case "in":  value *= 96;        break; // Inch
-				case "pc":  value *= 6;         break; // Pica
-				case "pt":  value *= 1 + 1 / 3; break; // Point
-				case "px":  case "":            break; // Pixel
-				case "em":  value *= baseSize;  break; // Em
-				case "rem": value *= 16;        break; // Root em (assumed to be 16px)
-				case "%":   return `${Math.round(value)}%`; // Percentage of font-size
-				default:    throw new TypeError(`Invalid unit: ${unit}`);
+			switch (unit) {
+				case "cm": // Centimetre
+					value *= cm;
+					break;
+				case "mm": // Millimetre
+					value *= cm / 10;
+					break;
+				case "q": // Quarter-millimetre
+					value *= cm / 40;
+					break;
+				case "in": // Inch
+					value *= 96;
+					break;
+				case "pc": // Pica
+					value *= 6;
+					break;
+				case "pt": // Point
+					value *= 1 + 1 / 3;
+					break;
+				case "px":
+				case "": // Pixel
+					break;
+				case "em": // Em
+					value *= baseSize;
+					break;
+				case "rem": // Root em (assumed to be 16px)
+					value *= 16;
+					break;
+				case "%": // Percentage of font-size
+					return `${Math.round(value)}%`;
+				default:
+					throw new TypeError(`Invalid unit: ${unit}`);
 			}
 			return `${Math.round((value / baseSize) * 100)}%`;
 	}
 	throw new TypeError(`Invalid type: ${typeof input}`);
 }
 
-
-// Section: Colours {{{1
+// Section: Colours {{{1
 
 /**
  * Load a colour palette from the given stylesheet.
@@ -531,13 +579,13 @@ function parseSize(input, baseSize = 16){
  * @return {Object}
  * @private
  */
-async function loadColours(from){
+async function loadColours(from) {
 	from = resolve(from);
 	const colours = {};
 	const rules = parseRules(await loadStyleSheet(from));
-	for(const [key, value] of Object.entries(rules)){
+	for(const [key, value] of Object.entries(rules)) {
 		if(!isObj(value) || !value.hasOwnProperty("color")) continue;
-		if(/^\.(light|medium|dark)-([^-:\s]+)::?before$/i.test(key)){
+		if(/^\.(light|medium|dark)-([^-:\s]+)::?before$/i.test(key)) {
 			const colour = RegExp.$2.toLowerCase();
 			colours[colour] = Object.assign(colours[colour] || {}, {
 				[RegExp.$1.toLowerCase()]: value.color,
@@ -547,8 +595,7 @@ async function loadColours(from){
 	return sortProps(colours);
 }
 
-
-// Section: Fonts {{{1
+// Section: Fonts {{{1
 
 /**
  * Load a list of icon-font descriptions using the given stylesheet.
@@ -558,47 +605,52 @@ async function loadColours(from){
  * @return {IconThemeFont[]}
  * @private
  */
-async function loadFonts(from){
+async function loadFonts(from) {
 	from = resolve(from);
 	const fonts = [];
-	const {rules} = await loadStyleSheet(from);
-	for(let font of rules){
+	const { rules } = await loadStyleSheet(from);
+	for(let font of rules) {
 		[, [font]] = parse(font);
-		
+
 		// Sanity check
-		if(!font["font-family"] || !font.src)
+		if(!font["font-family"] || !font.src) {
 			throw new TypeError("Failed to parse AST");
-		
+		}
+
 		// Unravel the `src:` of each @font-face rule
-		let {src} = font, path, format;
-		if(Array.isArray(src)){
-			if(Array.isArray(src[0]) && "local" === src[0][0])
+		let { src } = font, path, format;
+		if(Array.isArray(src)) {
+			if(Array.isArray(src[0]) && "local" === src[0][0]) {
 				src = src.find(x => "string" === typeof x || Array.isArray(x) && "local" !== x[0]) ?? src;
-			if("string" === typeof src)
+			}
+			if("string" === typeof src) {
 				path = src;
-			else for(const item of src){
-				if(null == path && "string" === typeof item)
-					path = item;
-				if(null == format && Array.isArray(item) && "format" === item[0]){
-					format = item[1];
-					if(Array.isArray(format))
-						format = format[0];
+			} else {
+				for(const item of src) {
+					if(null == path && "string" === typeof item) {
+						path = item;
+					}
+					if(null == format && Array.isArray(item) && "format" === item[0]) {
+						format = item[1];
+						if(Array.isArray(format)) {
+							format = format[0];
+						}
+					}
 				}
 			}
-		}
-		else path = parse(src);
+		} else path = parse(src);
 		format ||= /\.\w+$/.test(path) ? RegExp.lastMatch.slice(1) : "woff2";
-		if(path.toLowerCase().startsWith("atom://file-icons/")){
+		if(path.toLowerCase().startsWith("atom://file-icons/")) {
 			const head = resolve(dirname(from), "..");
 			const tail = path.slice(18);
 			path = resolve(join(head, tail));
 		}
 		fonts.push({
-			id:     font["font-family"].toLowerCase(),
-			src:    [{path, format}],
+			id: font["font-family"].toLowerCase(),
+			src: [{ path, format }],
 			weight: font["font-weight"] || "normal",
-			style:  font["font-style"]  || "normal",
-			size:   "100%",
+			style: font["font-style"] || "normal",
+			size: "100%",
 		});
 	}
 	return fonts;
@@ -616,25 +668,22 @@ async function loadFonts(from){
  * @return {Number} The number of fonts that were updated
  * @private
  */
-function updateFonts(fontDefs, targetDir, {force, noLink} = {}){
+function updateFonts(fontDefs, targetDir, { force, noLink } = {}) {
 	let updates = 0;
-	for(const font of fontDefs){
+	for(const font of fontDefs) {
 		const srcPath = font.src[0].path;
 		const srcStat = stat(srcPath);
 		const dstPath = join(targetDir, basename(srcPath));
-		if(!exists(dstPath)){
-			const [str, fn] = srcStat.dev !== stat(targetDir).dev
-				? ["Copying", copyFileSync]
-				: ["Linking", linkSync];
+		if(!exists(dstPath)) {
+			const [str, fn] = srcStat.dev !== stat(targetDir).dev ? ["Copying", copyFileSync] : ["Linking", linkSync];
 			console.info(`${str}: ${srcPath} -> ${dstPath}`);
 			fn(srcPath, dstPath);
 			linkSync(srcPath, dstPath);
 			++updates;
-		}
-		else{
+		} else {
 			const dstStat = stat(dstPath);
-			if(noLink || srcStat.dev !== dstStat.dev){
-				if(!force && dstStat.mtimeNs >= srcStat.mtimeNs){
+			if(noLink || srcStat.dev !== dstStat.dev) {
+				if(!force && dstStat.mtimeNs >= srcStat.mtimeNs) {
 					console.info(`Already up-to-date: ${dstPath}`);
 					continue;
 				}
@@ -642,8 +691,7 @@ function updateFonts(fontDefs, targetDir, {force, noLink} = {}){
 				unlinkSync(dstPath);
 				copyFileSync(srcPath, dstPath);
 				++updates;
-			}
-			else if(srcStat.ino !== dstStat.ino){
+			} else if(srcStat.ino !== dstStat.ino) {
 				console.info(`Linking: ${srcPath} -> ${dstPath}`);
 				unlinkSync(dstPath);
 				linkSync(srcPath, dstPath);
@@ -663,21 +711,22 @@ function updateFonts(fontDefs, targetDir, {force, noLink} = {}){
  * @property {{path: String, format: String}[]} src
  */
 
-
-// Section: Utilities {{{1
+// Section: Utilities {{{1
 
 /**
  * Throw an exception if one of the given paths isn't a directory.
  * @param {...String} paths
  * @return {void}
  */
-function assertDir(...paths){
-	for(const path of paths){
+function assertDir(...paths) {
+	for(const path of paths) {
 		const stats = stat(path, true);
-		if(!stats)
+		if(!stats) {
 			throw new Error("No such directory: " + path);
-		if(!stats.isDirectory())
+		}
+		if(!stats.isDirectory()) {
 			throw new Error("Not a directory: " + path);
+		}
 	}
 }
 
@@ -686,13 +735,15 @@ function assertDir(...paths){
  * @param {...String} paths
  * @return {void}
  */
-function assertFile(...paths){
-	for(const path of paths){
+function assertFile(...paths) {
+	for(const path of paths) {
 		const stats = stat(path, true);
-		if(!stats)
+		if(!stats) {
 			throw new Error("No such file: " + path);
-		if(!stats.isFile())
+		}
+		if(!stats.isFile()) {
 			throw new Error("Not a regular file: " + path);
+		}
 	}
 }
 
@@ -702,9 +753,12 @@ function assertFile(...paths){
  * @return {Boolean}
  * @see {@link fs.existsSync}
  */
-function exists(path){
-	try{ return !!lstatSync(path); }
-	catch(e){ return false; }
+function exists(path) {
+	try {
+		return !!lstatSync(path);
+	} catch (e) {
+		return false;
+	}
 }
 
 /**
@@ -717,13 +771,14 @@ function exists(path){
  * @param {Number} [count=1]
  * @return {String}
  */
-function getUnusedChar(input, count = 1){
+function getUnusedChar(input, count = 1) {
 	let chars = "";
 	let next = "\x00";
 	let code = 0;
-	for(let i = 0; i < count; ++i){
-		while(-1 !== input.indexOf(next) || -1 !== chars.indexOf(next))
+	for(let i = 0; i < count; ++i) {
+		while (-1 !== input.indexOf(next) || -1 !== chars.indexOf(next)) {
 			next = String.fromCodePoint(++code);
+		}
 		chars += next;
 	}
 	return chars;
@@ -741,9 +796,12 @@ function getUnusedChar(input, count = 1){
  * @return {?fs.BigIntStats}
  * @see {@link fs.lstatSync}
  */
-function stat(path, followSymlinks = false){
-	try{ return (followSymlinks ? statSync : lstatSync)(path, {bigint: true}); }
-	catch(e){ return null; }
+function stat(path, followSymlinks = false) {
+	try {
+		return (followSymlinks ? statSync : lstatSync)(path, { bigint: true });
+	} catch (e) {
+		return null;
+	}
 }
 
 /**
@@ -752,11 +810,11 @@ function stat(path, followSymlinks = false){
  * @return {Less~Ruleset}
  * @private
  */
-async function loadStyleSheet(path){
+async function loadStyleSheet(path) {
 	const file = readFileSync(path, "utf8");
-	const {css} = await Less.render(file, {filename: path});
+	const { css } = await Less.render(file, { filename: path });
 	path = path.replace(/\.less$/i, ".css");
-	return Less.parse(css, {filename: path});
+	return Less.parse(css, { filename: path });
 }
 
 /**
@@ -766,25 +824,24 @@ async function loadStyleSheet(path){
  * @return {String|Object|Array}
  * @private
  */
-function parse(node, refs = new WeakSet()){
+function parse(node, refs = new WeakSet()) {
 	if(null == node) return node;
 	if(!isObj(node)) return String(node ?? "");
 	if(refs.has(node)) return;
 	refs.add(node);
-	if(Array.isArray(node)){
+	if(Array.isArray(node)) {
 		node = node.map(x => parse(x, refs)).filter(x => null != x);
-		return node.length < 2
-			? parse(node[0], refs) ?? ""
-			: node;
+		return node.length < 2 ? parse(node[0], refs) ?? "" : node;
 	}
-	let {name, value, args, rules} = node;
+	let { name, value, args, rules } = node;
 	if("Comment" === node.type) return;
-	if(name  && value) return [parse(name, refs), parse(value, refs)];
+	if(name && value) return [parse(name, refs), parse(value, refs)];
 	if(!name && value) return parse(value, refs);
-	if(!value && (value = rules || args)){
+	if(!value && (value = rules || args)) {
 		value = value.map(x => parse(x, refs));
-		if(value.every(item => isEnt(item)))
+		if(value.every(item => isEnt(item))) {
 			value = Object.fromEntries(value);
+		}
 		return name ? [parse(name, refs), value] : value;
 	}
 	console.error("Bad input:", node);
@@ -806,15 +863,18 @@ function parse(node, refs = new WeakSet()){
  * @return {Object} A null-prototype object containing objects
  * keyed by selector, enumerated with parsed CSS properties.
  */
-function parseRules(ruleset){
-	const rules = {__proto__: null};
-	for(const rule of ruleset.rules){
-		if(!rule || "Comment" === rule.type)
+function parseRules(ruleset) {
+	const rules = { __proto__: null };
+	for(const rule of ruleset.rules) {
+		if(!rule || "Comment" === rule.type) {
 			continue;
+		}
 		const selectors = rule.selectors.map(sel =>
-			sel.elements.map(el => el.combinator.value + el.value).join("").trim());
-		for(const name of selectors)
-			rules[name] = {...rules[name], ...parse(rule)};
+			sel.elements.map(el => el.combinator.value + el.value).join("").trim()
+		);
+		for(const name of selectors) {
+			rules[name] = { ...rules[name], ...parse(rule) };
+		}
 	}
 	return rules;
 }
@@ -825,10 +885,9 @@ function parseRules(ruleset){
  * @return {Object}
  * @internal
  */
-function sortProps(input){
+function sortProps(input) {
 	const alnum = /[^A-Za-z0-9]/g;
-	input = Object.entries(input).sort(([a], [b]) =>
-		a.replace(alnum, "").localeCompare(b.replace(alnum, "")));
+	input = Object.entries(input).sort(([a], [b]) => a.replace(alnum, "").localeCompare(b.replace(alnum, "")));
 	return Object.fromEntries(input);
 }
 
