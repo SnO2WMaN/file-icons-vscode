@@ -1,0 +1,9 @@
+scripts:
+  generate-json:
+    cmd: deno run --allow-write ./generate_json/mod.ts --dist=$(pwd)/dist
+
+  lint:
+    cmd: deno lint
+
+  fmt:
+    cmd: deno fmt 

@@ -27,4 +27,5 @@ out
 !.vscode/extensions.json
 
 # Output
-dist/
+dist/*
+!dist/.keep
