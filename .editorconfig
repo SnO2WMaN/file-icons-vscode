@@ -7,3 +7,9 @@ insert_final_newline = true
 trim_trailing_whitespace = false
 indent_style = tab
 indent_size = 4
+
+[.*-version]
+insert_final_newline = false
+
+[.*-versions]
+insert_final_newline = false

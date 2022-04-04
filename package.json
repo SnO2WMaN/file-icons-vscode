@@ -56,9 +56,24 @@
 		"extends": "@alhadis",
 		"overrides": [{
 			"files": ["scripts/*.mjs"],
-			"rules": {"no-irregular-whitespace": 0}
+			"rules": { "no-irregular-whitespace": 0 }
 		}],
-		"rules": {"camelcase": 0}
+		"rules": {
+			"camelcase": 0,
+			"indent": [2, "tab", { "ignoredNodes": ["SwitchCase", "ConditionalExpression"] }],
+			"brace-style": [2, "1tbs"],
+			"keyword-spacing": [
+				2,
+				{
+					"overrides": {
+						"if": { "after": false },
+						"for": { "after": false },
+						"else": { "before": true },
+						"catch": { "before": true }
+					}
+				}
+			]
+		}
 	},
 	"eslintIgnore": ["defs"],
 	"devDependencies": {
