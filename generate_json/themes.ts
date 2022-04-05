@@ -1,3 +1,6 @@
+import { buildColorfulColors } from "./colors.ts";
+import { parseIconDB } from "./icondef.ts";
+
 export type Theme = {
   fonts: {
     id: string;
@@ -79,6 +82,11 @@ export const commom: Pick<
   "rootFolderExpanded": "_fd_root_open",
 };
 
-export const colorfull = (): Theme => ({ ...commom });
+export const colorfull = async (): Promise<Theme> => {
+  await parseIconDB();
+  return ({ ...commom });
+};
 
-export const colorless: () => Theme = () => ({ ...commom });
+export const colorless = async (): Promise<Theme> => {
+  return ({ ...commom });
+};

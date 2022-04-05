@@ -1,6 +1,6 @@
 scripts:
   generate-json:
-    cmd: deno run --allow-write ./generate_json/mod.ts --dist=$(pwd)/dist
+    cmd: deno run --allow-read --allow-write ./generate_json/mod.ts --atom=$(pwd)/atom --dist=$(pwd)/dist
 
   lint:
     cmd: deno lint
